@@ -1,11 +1,91 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>Powernet 챗봇 테스트</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Powernet Q&A 챗봇</title>
+  <style>
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Noto Sans KR,sans-serif;background:#f6f8fb;color:#111}
+    header{background:#0d47a1;color:#fff;padding:18px 16px;font-weight:700}
+    .container{max-width:900px;margin:24px auto;padding:0 16px}
+    .hero{background:#e3f2fd;border:1px solid #bbdefb;padding:16px 18px;border-radius:12px;margin-bottom:16px}
+    .chat{display:flex;flex-direction:column;height:60vh;min-height:420px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden}
+    .messages{flex:1;overflow:auto;padding:16px}
+    .msg{margin-bottom:12px;max-width:85%}
+    .me{margin-left:auto;text-align:right}
+    .bubble{display:inline-block;padding:10px 12px;border-radius:12px;line-height:1.4}
+    .me .bubble{background:#e8f0fe}
+    .bot .bubble{background:#f1f5f9}
+    .inputbar{border-top:1px solid #e5e7eb;display:flex;gap:8px;padding:10px;background:#fafafa}
+    input[type="text"]{flex:1;padding:12px;border:1px solid #cfd8dc;border-radius:10px;font-size:15px}
+    button{padding:12px 16px;border:none;border-radius:10px;background:#1976d2;color:#fff;font-weight:700;cursor:pointer}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .footer{margin-top:10px;color:#607d8b;font-size:12px}
+    @media (max-width:480px){.chat{height:70vh}}
+  </style>
 </head>
 <body>
-  <h1>안녕하세요! Powernet Q&A 챗봇 테스트 페이지입니다 🚀</h1>
-  <p>이 페이지는 GitHub Pages를 통해 배포되었습니다.</p>
+  <header>Powernet Q&A 챗봇 (GitHub Pages)</header>
+  <div class="container">
+    <div class="hero">
+      <b>안내</b> — 현재는 데모 모드입니다. 아래 입력창에 질문을 쓰면 임시 응답이 표시됩니다.
+      실제 사내 챗봇과 연결하려면 `/chat` API 엔드포인트를 붙이세요.
+    </div>
+
+    <div class="chat" id="chat">
+      <div class="messages" id="messages"></div>
+      <form class="inputbar" id="form">
+        <input id="q" type="text" placeholder="예: 연차 반차 계산 기준이 뭐예요?" autocomplete="off" />
+        <button id="send" type="submit">전송</button>
+      </form>
+    </div>
+
+    <div class="footer">
+      © Powernet — 이 UI는 GitHub Pages로 호스팅됩니다. 다우오피스 Link+/대시보드 iframe으로 손쉽게 임베드 가능.
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('form');
+    const q = document.getElementById('q');
+    const msgs = document.getElementById('messages');
+    const sendBtn = document.getElementById('send');
+
+    function addMessage(text, who='bot'){
+      const wrap = document.createElement('div');
+      wrap.className = 'msg ' + (who==='me'?'me':'bot');
+      const b = document.createElement('div');
+      b.className = 'bubble';
+      b.textContent = text;
+      wrap.appendChild(b);
+      msgs.appendChild(wrap);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    addMessage('안녕하세요! 무엇을 도와드릴까요?');
+
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const text = q.value.trim();
+      if(!text) return;
+      addMessage(text,'me');
+      q.value=''; q.focus();
+
+      // 로딩 표시
+      sendBtn.disabled = true;
+      const loaderId = Math.random().toString(36).slice(2);
+      addMessage('답변 생성 중...', 'bot'); // 간단 로딩
+
+      // === 실제 백엔드 연결 시 이 부분을 교체 ===
+      // 예: const res = await fetch('/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({query:text})});
+      // const data = await res.json(); addMessage(data.answer || '(빈 응답)');
+      await new Promise(r=>setTimeout(r, 700));
+      const fake = `질문: "${text}"\n(데모 응답) 백엔드 연결 후 실제 규정 근거와 함께 답변이 표시됩니다.`;
+      // ===========================================
+      addMessage(fake,'bot');
+
+      sendBtn.disabled = false;
+    });
+  </script>
 </body>
 </html>

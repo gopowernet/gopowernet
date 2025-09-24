@@ -16,8 +16,10 @@
     .bubble{display:inline-block;padding:10px 12px;border-radius:12px;line-height:1.4}
     .me .bubble{background:#e8f0fe}
     .bot .bubble{background:#f1f5f9}
-    .inputbar{border-top:1px solid #e5e7eb;display:flex;gap:8px;padding:10px;background:#fafafa}
+    .inputbar{border-top:1px solid #e5e7eb;display:flex;gap:8px;padding:10px;background:#fafafa;align-items:center}
     input[type="text"]{flex:1;padding:12px;border:1px solid #cfd8dc;border-radius:10px;font-size:15px}
+    input[type="file"]{display:none;}
+    .file-label{padding:12px 16px;border-radius:10px;background:#4caf50;color:#fff;font-weight:700;cursor:pointer}
     button{padding:12px 16px;border:none;border-radius:10px;background:#1976d2;color:#fff;font-weight:700;cursor:pointer}
     button:disabled{opacity:.6;cursor:not-allowed}
     .footer{margin-top:10px;color:#607d8b;font-size:12px}
@@ -28,13 +30,15 @@
   <header>Powernet Q&A 챗봇 (GitHub Pages)</header>
   <div class="container">
     <div class="hero">
-      <b>안내</b> — 이 버전은 백엔드 API와 직접 연결됩니다. `/chat` 엔드포인트에 질문을 전송합니다.
+      <b>안내</b> — 이 버전은 파일 업로드 기능을 지원합니다. 파일을 업로드하고 질문하면 해당 파일의 내용을 기반으로 답변합니다.
     </div>
 
     <div class="chat" id="chat">
       <div class="messages" id="messages"></div>
       <form class="inputbar" id="form">
-        <input id="q" type="text" placeholder="예: 연차 반차 계산 기준이 뭐예요?" autocomplete="off" />
+        <label for="file-input" class="file-label">파일 선택</label>
+        <input type="file" id="file-input" accept=".pdf,.doc,.docx,.txt">
+        <input id="q" type="text" placeholder="파일과 관련된 질문을 입력하세요." autocomplete="off" />
         <button id="send" type="submit">전송</button>
       </form>
     </div>
@@ -49,6 +53,7 @@
     const q = document.getElementById('q');
     const msgs = document.getElementById('messages');
     const sendBtn = document.getElementById('send');
+    const fileInput = document.getElementById('file-input');
 
     function addMessage(text, who='bot'){
       const wrap = document.createElement('div');
@@ -61,14 +66,23 @@
       msgs.scrollTop = msgs.scrollHeight;
     }
 
-    addMessage('안녕하세요! 무엇을 도와드릴까요?');
+    addMessage('안녕하세요! 파일을 업로드하고 질문하시면 해당 문서의 내용을 기반으로 답변해 드립니다.');
 
     form.addEventListener('submit', async (e)=>{
       e.preventDefault();
       const text = q.value.trim();
-      if(!text) return;
+      const file = fileInput.files[0];
       
-      addMessage(text,'me');
+      if(!text && !file) {
+        addMessage('질문이나 파일을 업로드해주세요.', 'bot');
+        return;
+      }
+
+      let displayMessage = text;
+      if (file) {
+        displayMessage = `📄 [${file.name}]와(과) 함께 질문: ${text}`;
+      }
+      addMessage(displayMessage,'me');
       q.value='';
       q.focus();
 
@@ -76,12 +90,17 @@
       sendBtn.disabled = true;
       addMessage('답변 생성 중...', 'bot');
 
-      // 백엔드 API 호출
+      // FormData 객체로 파일과 질문을 함께 전송
+      const formData = new FormData();
+      formData.append('query', text);
+      if (file) {
+        formData.append('file', file);
+      }
+
       try {
         const res = await fetch('/chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: text })
+          body: formData // Content-Type 헤더는 FormData 사용 시 자동으로 설정됨
         });
 
         if (!res.ok) {
@@ -90,19 +109,19 @@
 
         const data = await res.json();
         
-        // 이전 "답변 생성 중..." 메시지 삭제 (선택 사항)
-        msgs.lastChild.remove(); 
+        // "답변 생성 중..." 메시지 제거
+        if (msgs.lastChild && msgs.lastChild.textContent.includes('답변 생성 중')) {
+          msgs.lastChild.remove();
+        }
         
         addMessage(data.answer || '죄송합니다. 답변을 찾을 수 없습니다.');
       } catch (error) {
         console.error('API Error:', error);
-        // 이전 "답변 생성 중..." 메시지 삭제 후 오류 메시지 표시
         if (msgs.lastChild && msgs.lastChild.textContent.includes('답변 생성 중')) {
           msgs.lastChild.remove();
         }
         addMessage('죄송합니다. 현재 챗봇 서버에 문제가 있습니다.');
       } finally {
-        // 요청이 완료되면 버튼 활성화
         sendBtn.disabled = false;
       }
     });
